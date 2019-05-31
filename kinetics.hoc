@@ -1,0 +1,132 @@
+load_file("nrngui.hoc")
+create a
+a	{nseg=1 diam=20 L=20 
+	insert hpg eh_hpg=-30 
+	insert pas g_pas=1/10000 Ra=150 cm=1}
+access a
+
+tstop=300
+vlow=-140
+vhigh=-50
+dt=0.1
+celsius=30
+color=1
+
+objref gk, b,gt,vc, gs,c, gf,ic
+b = new VBox()
+c = new VBox()
+b.intercept(1)
+gk = new Graph(0)
+gk.view(vlow,0,vhigh-vlow,1,0,0,100,200)
+gk.exec_menu("New Axis")
+gk.exec_menu("10% Zoom out")
+gk.label(0.1,0.9,"Steady-state; Fig.1b'")
+gk.addexpr("linf_hpg",1,2, 2*tstop,0,2)
+
+gt = new Graph(0)
+gt.view(vlow,0,vhigh-vlow,600,0,0,100,200)
+gt.exec_menu("New Axis")
+gt.exec_menu("10% Zoom out")
+gt.label(0.1,0.9,"Time constant; Fig.1c'")
+gt.addexpr("taul_hpg",2,2, 2*tstop,0,2)
+
+gs = new Graph(0)
+gs.view(0,-120,tstop,50,0,0,100,200)
+gs.exec_menu("New Axis")
+gs.exec_menu("10% Zoom out")
+gs.label(0.1,0.9,"Current injection: Fig.1a")
+gs.exec_menu("Keep Lines")
+
+xpanel("")
+xbutton("run ", "run()")
+xvalue("ghbar","ghbar_hpg")
+xpanel()
+b.intercept(0)
+b.map("kinetics from Cadetti and Belluzzi (2001)",100,0,200,600)
+
+c.intercept(1)
+gf = new Graph(0)
+gf.view(0,-500,1500,500,0,0,100,100)
+gf.exec_menu("New Axis")
+gf.exec_menu("10% Zoom out")
+gf.label(0.3,0.95,"Voltage-clamp (currents in nA) protocol as in Fig.1a'")
+gf.exec_menu("Keep Lines")
+c.intercept(0)
+c.map("activation and deactivation",435,0,500,360)
+
+vc = new SEClamp(0.5)
+ic= new IClamp(0.5)
+
+proc run() {
+gk.begin()
+for (v=vlow; v<vhigh; v=v+1) {
+    rate_hpg(v)
+    gk.plot(v)
+}
+gk.flush()
+doNotify()
+
+gt.begin()
+gt.mark(-70,570,"+",12,3,2)
+gt.mark(-80,500,"+",12,3,2)
+gt.mark(-90,350,"+",12,3,2)
+gt.mark(-100,230,"+",12,3,2)
+gt.mark(-110,140,"+",12,3,2)
+gt.mark(-120,110,"+",12,3,2)
+gt.mark(-130,90,"+",12,3,2)
+for (v=vlow; v<vhigh; v=v+1) {
+    rate_hpg(v)
+    gt.plot(v)
+}
+gt.flush()
+doNotify()
+
+gs.addexpr("a.v(0.5)",color,1, 2*tstop,0,2)
+
+gs.begin()
+tstop=300
+ic.del=2
+ic.dur=tstop
+ic.amp=-0.05
+t=0
+v=-70
+finitialize(v)
+fcurrent()
+e_pas=v+(i_hpg)/g_pas
+while (t<tstop) {
+    fadvance()
+    gs.plot(t)
+    }
+gs.flush()
+doNotify()
+ic.amp=0
+
+gf.addexpr("i_hpg*area(0.5)*10",1 ,1, 2*tstop,0,2) // *10=pA, *1e-2=nA
+ghbar_hpg=0.0004
+tstop=1500
+k=-50
+while (k>=-140) {
+t=0
+vc.amp1=-40
+vc.dur1=2
+vc.amp2=k
+vc.dur2=1000
+vc.amp3=-40
+vc.dur3=500
+forall {finitialize(-40)}
+fcurrent()
+while (t<tstop) {
+    fadvance()
+    gf.plot(t)
+    }
+gf.flush()
+doNotify()
+k=k-10
+gf.begin()
+}
+vc.dur1=0
+vc.dur2=0
+vc.dur3=0
+}
+
+
